@@ -1,0 +1,9 @@
+name = "test-project"
+uuid = "ff84bac8-a277-11e9-1897-43b177390c8f"
+authors = ["Quang Luong <quangio@outlook.com>"]
+version = "0.1.0"
+
+[deps]
+ArrayFire = "b19378d9-d87a-599a-927f-45f220a2c452"
+BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
