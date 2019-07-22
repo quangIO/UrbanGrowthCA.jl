@@ -101,10 +101,13 @@ end
   1 - evaluate(config, 1)
 end
 
-@time ret = simulate(ParameterConfig(0.00, [0.2], [1], 12, [0.00]), 1)
-ArrayFire.image(ret)
+@fastmath @inbounds function visualize(x::Vector)
+  config = ParameterConfig(x[1], [x[2]], [x[3]], 1000, [x[4]])
+  simulate(config, 1)
+end
+
+res = bboptimize(evaluate; SearchRange = [(.001, .1), (.001, .1), (.001, .1), (.001, .1)], MaxTime=100.0)
+@time ret = visualize(best_candidate(res))
 save_image("test.png", ret |> AFArray{Float32})
 
 evaluate(ParameterConfig(0.00, [0.0], [0], 12, [0.00]), 1)
-
-res = bboptimize(evaluate; SearchRange = [(.001, .1), (.001, .1), (.001, .1), (.001, .1)], MaxTime=100.0)
