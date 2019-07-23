@@ -5,7 +5,7 @@ using ProgressMeter
 allowslow(AFArray, false)
 
 # cd("/home/quangio/CLionProjects/cellular_automata/cmake-build-debug")
-cd("/home/quangio/academic/Data/")
+cd("data")
 load_images_with_pattern(needle::Union{AbstractString, Regex}) = 
   map(f -> load_image(f, false), sort(filter(s -> occursin(needle, s), readdir())))
 
@@ -92,9 +92,10 @@ function simulate(config::ParameterConfig, idx::Number)
   return land
 end
 
+
 @inbounds function evaluate(config::ParameterConfig, idx::Number)
-  scale = 1
-  resize(_in::AFArray) = resize(_in, simulation_dim[1] ÷ scale, simulation_dim[2] ÷ scale, AF_INTERP_BICUBIC_SPLINE)
+  scale = 2
+  downscale(_in::AFArray) = resize(_in, simulation_dim[1] ÷ scale, simulation_dim[2] ÷ scale, AF_INTERP_NEAREST)
   predicted = simulate(config, idx)
   actual = lands[idx + 1]
   jaccard = 1 - count_all((predicted & actual) + 0x0)[1] / count_all((predicted | actual) + 0x0)[1]
@@ -103,7 +104,7 @@ end
 
   smape = abs(a - p) / (a + p)
 
-  jaccard + 100smape
+  jaccard + 50smape
 end
 
 @fastmath @inbounds function evaluate(x::Vector)
@@ -122,6 +123,6 @@ save_image("test.png", test |> AFArray{Float32})
 
 res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=100.0)
 @show best_candidate(res)
-@time ret = visualize(best_candidate(res)); save_image("test.png", ret |> AFArray{Float32})
+ret = visualize(best_candidate(res)); save_image("predict.png", ret |> AFArray{Float32})
 
 evaluate(ParameterConfig(0.00, [0.0], [0], 12, [0.00]), 1)
