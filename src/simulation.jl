@@ -4,13 +4,15 @@ using ProgressMeter
 
 allowslow(AFArray, false)
 
-cd("/home/quangio/CLionProjects/cellular_automata/cmake-build-debug")
+# cd("/home/quangio/CLionProjects/cellular_automata/cmake-build-debug")
+cd("/home/quangio/academic/Data/")
 load_images_with_pattern(needle::Union{AbstractString, Regex}) = 
-  map(f -> load_image(f, false) > 0, sort(filter(s -> occursin(needle, s), readdir())))
+  map(f -> load_image(f, false), sort(filter(s -> occursin(needle, s), readdir())))
 
-const lands = load_images_with_pattern(r"^land\.\d+\.png$")
-const roads = load_images_with_pattern(r"^road\.\d+\.png$")
-const policies = load_images_with_pattern(r"^policy\.\d+\.png$")
+const lands = load_images_with_pattern(r"^land\.\d+\.png$") .> 0
+const roads = load_images_with_pattern(r"^road\.\d+\.png$") .> 0
+const policies = load_images_with_pattern(r"^policy\.\d+\.png$") ./ 255
+const water_forest = load_images_with_pattern("water_forest.png")[1] .> 0
 
 const simulation_dim = size(lands[1])
 
@@ -39,7 +41,7 @@ end
 end
 
 @fastmath @inbounds urbanize(prob::Union{Real,AFArray}, idx::Number)::AFArray =
-  rand(AFArray, simulation_dim) < prob .* policies[idx]
+  (rand(AFArray, simulation_dim) < prob .* policies[idx]) & water_forest
 
 @inbounds @inbounds count_neighbour(state::AFArray, idx::Number = 0x1)::AFArray =
   convolve2(state, Util.neighbour_counts[idx], AF_CONV_DEFAULT, AF_CONV_AUTO)
@@ -91,23 +93,35 @@ function simulate(config::ParameterConfig, idx::Number)
 end
 
 @inbounds function evaluate(config::ParameterConfig, idx::Number)
-  predicted = resize(simulate(config, idx), 250, 250, AF_INTERP_NEAREST)
-  actual = resize(lands[idx + 1], 250, 250, AF_INTERP_NEAREST)
-  count_all((predicted & actual) + 0x0)[1] / count_all((predicted | actual) + 0x0)[1]
+  scale = 1
+  resize(_in::AFArray) = resize(_in, simulation_dim[1] ÷ scale, simulation_dim[2] ÷ scale, AF_INTERP_BICUBIC_SPLINE)
+  predicted = simulate(config, idx)
+  actual = lands[idx + 1]
+  jaccard = 1 - count_all((predicted & actual) + 0x0)[1] / count_all((predicted | actual) + 0x0)[1]
+  p = count_all(predicted + .0)[1]
+  a = count_all(actual + .0)[1]
+
+  smape = abs(a - p) / (a + p)
+
+  jaccard + 100smape
 end
 
 @fastmath @inbounds function evaluate(x::Vector)
-  config = ParameterConfig(x[1], [x[2]], [x[3]], 1000, [x[4]])
-  1 - evaluate(config, 1)
+  config = ParameterConfig(x[1], [x[2]], [x[3]], 100, [x[4]])
+  evaluate(config, 1)
 end
 
-@fastmath @inbounds function visualize(x::Vector)
-  config = ParameterConfig(x[1], [x[2]], [x[3]], 1000, [x[4]])
-  simulate(config, 1)
+@fastmath @inbounds function visualize(x::Vector, idx::Number = 1)
+  config = ParameterConfig(x[1], [x[2]], [x[3]], 100, [x[4]])
+  simulate(config, idx)
 end
 
-res = bboptimize(evaluate; SearchRange = [(.001, .1), (.001, .1), (.001, .1), (.001, .1)], MaxTime=100.0)
-@time ret = visualize(best_candidate(res))
-save_image("test.png", ret |> AFArray{Float32})
+evaluate(zeros(4))
+@time test = visualize([0.0, 0.0001, 0.0001, 0.0001])
+save_image("test.png", test |> AFArray{Float32})
+
+res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=100.0)
+@show best_candidate(res)
+@time ret = visualize(best_candidate(res)); save_image("test.png", ret |> AFArray{Float32})
 
 evaluate(ParameterConfig(0.00, [0.0], [0], 12, [0.00]), 1)
