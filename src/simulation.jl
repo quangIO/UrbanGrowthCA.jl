@@ -43,7 +43,7 @@ end
 @fastmath @inbounds urbanize(prob::Union{Real,AFArray}, idx::Number)::AFArray =
   (rand(AFArray, simulation_dim) < prob .* policies[idx]) & water_forest
 
-@inbounds @inbounds count_neighbour(state::AFArray, idx::Number = 0x1)::AFArray =
+@inbounds count_neighbour(state::AFArray, idx::Number = 0x1)::AFArray =
   convolve2(state, Util.neighbour_counts[idx], AF_CONV_DEFAULT, AF_CONV_AUTO)
 
 const config = ParameterConfig(0.00, [0.00], [0.1], 12, [0.00])
