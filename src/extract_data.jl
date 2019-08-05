@@ -14,7 +14,7 @@ const roads = load_images_with_pattern(r"^road\.\d+\.png$") .> 0
 const policies = load_images_with_pattern(r"^policy\.\d+\.png$") ./ 255
 const water_forest = load_images_with_pattern("water_forest.png")[1] .> 0
 const simulation_dim = size(lands[1])
-const one_matrices = [ones(Float32, s, s) |> AFArray for s ∈ 3:2:13]
+const one_matrices = [ones(Float32, s, s) |> AFArray for s ∈ 5:10:115]
 
 land = lands[1]
 road = roads[1]
@@ -72,8 +72,9 @@ i = 1
 turned
 centroids
 for i = 1:size(turned)[2]
-  @show turned[:, i], m00[indices_centroid[i][1]], dists_centroid[i][1]
-  neighbors[1493, 264]
+  x, y = turned[:, i]
+  @show i, m00[indices_centroid[i][1]], dists_centroid[i][1], neighbors[y, x]
+  
   return 
 end
 # draw!(tmp, CirclePointRadius(500, 50, 100))
