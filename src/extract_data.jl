@@ -4,6 +4,7 @@ using NearestNeighbors
 using Random
 using JuliaDB
 
+pwd()
 cd("data/processed_working")
 try mkdir("out") catch; @info "folder already exists" end
 
@@ -23,9 +24,17 @@ land_target = lands[3]
 
 neighbors = [convolve2(land + UInt32(0), filter, 0x00000, 0x00000) |> Array for filter ∈ one_matrices]
 
-function draw_from_xy(coordinates::Array)
+function draw_from_xy(coordinates::Array{Number, 2})
   tmp = (land < 0) |> Array |> Array{Gray{N0f8}};
   @inbounds for center = eachcol(coordinates) 
+    draw!(tmp, CirclePointRadius(center[1], center[2], 1))
+  end
+  tmp
+end
+
+function draw_from_xy(coordinates::Vector{Tuple})
+  tmp = (land < 0) |> Array |> Array{Gray{N0f8}};
+  @inbounds for center = eachrow(coordinates) 
     draw!(tmp, CirclePointRadius(center[1], center[2], 1))
   end
   tmp
@@ -72,20 +81,27 @@ indices_centroid_C, dists_centroid_C = knn(centroids_tree, not_turned, 3, true)
 indices_road_C, dists_road_C = knn(roads_tree, not_turned, 3, true)
 
 data = Tuple{Float64,Float64,Float64,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,UInt32,Bool}[]
+XY = Tuple[]
 for i = 1:size(turned)[2]
   x, y = turned[:, i]
   tuple = m00[indices_centroid[i][1]], dists_centroid[i][1], dists_road[i][1], [neighbor[y, x] for neighbor ∈ neighbors]..., true
   push!(data, tuple)
+  push!(XY, (x, y))
 end
 
 for i = 1:size(not_turned)[2]
   x, y = not_turned[:, i]
   tuple = m00[indices_centroid_C[i][1]], dists_centroid_C[i][1], dists_road_C[i][1], [neighbor[y, x] for neighbor ∈ neighbors]..., false
   push!(data, tuple)
+  push!(XY, (x, y))
 end
 
+probability_table = JuliaDB.load("out/prob.db")
+
+XY |> draw_from_xy
+
 data_table = table(data)
-JuliaDB.save(data_table, "out/data.db")
+JuliaDB.save(data_table, "out/data_2.db")
 # draw!(tmp, CirclePointRadius(500, 50, 100))
 save_image("out/tmp.png", turned)
 
