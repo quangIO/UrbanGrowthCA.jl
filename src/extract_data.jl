@@ -17,9 +17,9 @@ const water_forest = load_images_with_pattern("water_forest.png")[1] .> 0
 const simulation_dim = size(lands[1])
 const one_matrices = [ones(Float32, s, s) |> AFArray for s ∈ 5:10:115]
 
-land = lands[1]
-road = roads[1]
-land_target = lands[2]
+land = lands[2]
+road = roads[2]
+land_target = lands[3]
 
 neighbors = [convolve2(land + UInt32(0), filter, 0x00000, 0x00000) |> Array for filter ∈ one_matrices]
 
