@@ -2,10 +2,10 @@ using BlackBoxOptim
 using ArrayFire
 using ProgressMeter
 
-allowslow(AFArray, false)
-
+allowslow(AFArray, false);pwd()
 # cd("/home/quangio/CLionProjects/cellular_automata/cmake-build-debug")
-cd("data")
+# cd("data")
+cd("data/processed_working")
 load_images_with_pattern(needle::Union{AbstractString, Regex}) = 
   map(f -> load_image(f, false), sort(filter(s -> occursin(needle, s), readdir())))
 
@@ -104,7 +104,7 @@ end
 
   smape = abs(a - p) / (a + p)
 
-  jaccard + 50smape
+  jaccard + 80smape
 end
 
 @fastmath @inbounds function evaluate(x::Vector)
@@ -121,7 +121,7 @@ evaluate(zeros(4))
 @time test = visualize([0.0, 0.0001, 0.0001, 0.0001])
 save_image("test.png", test |> AFArray{Float32})
 
-res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=100.0)
+res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=200.0)
 @show best_candidate(res)
 ret = visualize(best_candidate(res)); save_image("predict.png", ret |> AFArray{Float32})
 
