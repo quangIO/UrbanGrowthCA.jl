@@ -104,7 +104,7 @@ end
 
   smape = abs(a - p) / (a + p)
 
-  jaccard + 80smape
+  jaccard + 8smape
 end
 
 @fastmath @inbounds function evaluate(x::Vector)
@@ -121,10 +121,14 @@ evaluate(zeros(4))
 @time test = visualize([0.0, 0.0001, 0.0001, 0.0001])
 save_image("test.png", test |> AFArray{Float32})
 
-res = bboptimize(evaluate; SearchRange = map(x -> x./0.1, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=200.0)
+for i = 1:length(lands)
+  name = string("land.", i, ".mono.png")
+  save_image(name, lands[i] |> AFArray{Float32})
+end
+
+
+res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1), (1e-2, 1), (1e-2, 1)]), MaxTime=200.0)
 @show best_candidate(res)
 ret = visualize(best_candidate(res)); save_image("predict.png", ret |> AFArray{Float32})
-
-ret = visualize(zeros(4)); save_image("predict.png", ret |> AFArray{Float32})
 
 evaluate(ParameterConfig(0.00, [0.0], [0], 12, [0.00]), 1)
