@@ -5,16 +5,19 @@ using ProgressMeter
 allowslow(AFArray, false);pwd()
 # cd("/home/quangio/CLionProjects/cellular_automata/cmake-build-debug")
 # cd("data")
-cd("data/processed_working")
+cd("data/downscaled/processed_working")
 load_images_with_pattern(needle::Union{AbstractString, Regex}) = 
   map(f -> load_image(f, false), sort(filter(s -> occursin(needle, s), readdir())))
 
-const lands = load_images_with_pattern(r"^land\.\d+\.png$") .> 0
-const roads = load_images_with_pattern(r"^road\.\d+\.png$") .> 0
+const lands = load_images_with_pattern(r"^land\.\d+\.png$") ./ 255 .> 0.2
+const roads = load_images_with_pattern(r"^road\.\d+\.png$") ./ 255 .> 0.2
 const policies = load_images_with_pattern(r"^policy\.\d+\.png$") ./ 255
 const water_forest = load_images_with_pattern("water_forest.png")[1] .> 0
 
 const simulation_dim = size(lands[1])
+
+# a = load_images_with_pattern(r"^land\.\d+\.png$")[1] ./ 255 .> 0.2
+# save_image("test.png", a |> AFArray{Float32})
 
 module Util
   using ArrayFire
@@ -28,7 +31,7 @@ module Util
   end
   const neighbour_counts = gen_count_kernel()
 end
-
+# (count_all(lands[3])[1] - count_all(lands[1])[1]) / 20count_all(lands[1])[1]
 struct ParameterConfig
   diffusion_factor::Float32
   breed_factor::Vector{Float32}
@@ -46,8 +49,6 @@ end
 @inbounds count_neighbour(state::AFArray, idx::Number = 0x1)::AFArray =
   convolve2(state, Util.neighbour_counts[idx], AF_CONV_DEFAULT, AF_CONV_AUTO)
 
-const config = ParameterConfig(0.00, [0.00], [0.1], 12, [0.00])
-
 function simulate(config::ParameterConfig, idx::Number)
   breed_masks = [fill(1 - factor, simulation_dim) |> AFArray{Float32} for factor ∈ config.breed_factor]
   road_breed_masks = [fill(1 - factor, simulation_dim) |> AFArray{Float32} for factor ∈ config.road_breed_factor]
@@ -55,7 +56,6 @@ function simulate(config::ParameterConfig, idx::Number)
   @inbounds land = lands[idx]
   @inbounds road = roads[idx]
   for step = 1:20
-    
     # Diffusion
     diffusion = urbanize(config.diffusion_factor, idx)
     land |= diffusion
@@ -108,12 +108,12 @@ end
 end
 
 @fastmath @inbounds function evaluate(x::Vector)
-  config = ParameterConfig(x[1], [x[2]], [x[3]], 100, [x[4]])
+  config = ParameterConfig(x[1], [x[2]], [x[3]], 20, [x[4]])
   evaluate(config, 1)
 end
 
 @fastmath @inbounds function visualize(x::Vector, idx::Number = 1)
-  config = ParameterConfig(x[1], [x[2]], [x[3]], 100, [x[4]])
+  config = ParameterConfig(x[1], [x[2]], [x[3]], 20, [x[4]])
   simulate(config, idx)
 end
 
@@ -121,8 +121,10 @@ evaluate(zeros(4))
 @time test = visualize([0.0, 0.0001, 0.0001, 0.0001])
 save_image("test.png", test |> AFArray{Float32})
 
-res = bboptimize(evaluate; SearchRange = map(x -> x./10, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=200.0)
+res = bboptimize(evaluate; SearchRange = map(x -> x./0.1, [(1e-3, 1e-2), (1e-2, 1e-1), (1e-2, 1e-1), (1e-2, 1e-1)]), MaxTime=200.0)
 @show best_candidate(res)
 ret = visualize(best_candidate(res)); save_image("predict.png", ret |> AFArray{Float32})
+
+ret = visualize(zeros(4)); save_image("predict.png", ret |> AFArray{Float32})
 
 evaluate(ParameterConfig(0.00, [0.0], [0], 12, [0.00]), 1)
